@@ -55,8 +55,7 @@ void MeshDuplicator::duplicateNodesHexa(
 
 void MeshDuplicator::buildFaceLookup(
   const std::vector<Element>& elements,
-  std::unordered_map<std::array<int, 4>, std::pair<int, int>>& lookup
-) {
+  std::unordered_map<std::array<int, 4>, std::pair<int, int>>& lookup) {
   for (int e = 0; e < elements.size(); ++e) {
     for (int face = 0; face < 6; ++face) {
       std::array<int, 4> key;
