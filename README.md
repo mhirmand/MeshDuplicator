@@ -1,2 +1,2 @@
-# MeshDuplicator
-C++ code to separate elements in a mesh by duplicating its nodes
+# Hexahedral Mesh Node Duplication and Interface Generation
+This project implements an algorithm to duplicate nodes in a hexahedral mesh such that no two elements share nodes. It also generates interface elements between adjacent faces and identifies boundary faces. The algorithm is implemented in C++ and is designed to work with hexahedral meshes, ensuring that the resulting mesh is suitable for applications requiring non-conforming meshes or interface elements.
