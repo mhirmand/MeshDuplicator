@@ -1,36 +1,40 @@
 #include "SeperateNodes.h"
+#include "mesh_entities.h"
+
 #include <algorithm>
 
 void MeshDuplicator::duplicateNodesHexa(
-  const std::vector<Element>& originalElements,
-  const std::vector<Point3D>& originalPos,
-  std::vector<Element>& newElements,
-  std::vector<Point3D>& newPos,
-  std::vector<InterfaceElem>& interfaceList,
-  std::vector<BoundaryFace>& boundaryList,
+  const Mesh &originalMesh,
+  Mesh & newMesh,
+
   std::vector<NodeOrigin>& nodeOrigin
 ) {
+
+  // get original element entities
+  std::vector<Element> originalElements = originalMesh.elements;
+  std::vector<Point3D> originalPos = originalMesh.nodes;
+
   // Reset output containers
-  newElements.clear();
+  newMesh.elements.clear();
+  newMesh.nodes.clear();
+  newMesh.interfaces.clear();
+  newMesh.boundaries.clear();
   nodeOrigin.clear();
-  newPos.clear();
-  interfaceList.clear();
-  boundaryList.clear();
 
   // Pre-allocate memory
-  newElements.reserve(originalElements.size());
+  newMesh.elements.reserve(originalElements.size());
+  newMesh.nodes.resize(8 * originalElements.size());
   nodeOrigin.reserve(8 * originalElements.size());
-  newPos.resize(8 * originalElements.size());
 
   // Step 1: Duplicate nodes
   int newnnode = 0;
   for (const auto& elem : originalElements) {
     Element newElem;
     for (int i = 0; i < 8; ++i) {
-      nodeOrigin.push_back({ elem.nNode[i], static_cast<int>(newElements.size()), i });
+      nodeOrigin.push_back({ elem.nNode[i], static_cast<int>(newMesh.elements.size()), i });
       newElem.nNode[i] = newnnode++;
     }
-    newElements.push_back(newElem);
+    newMesh.elements.push_back(newElem);
   }
 
   // Step 2: Build face lookup
@@ -42,14 +46,14 @@ void MeshDuplicator::duplicateNodesHexa(
   for (int e = 0; e < originalElements.size(); ++e) {
     for (int face = 0; face < 6; ++face) {
       if (!paired[e][face]) {
-        processFace(e, face, originalElements, faceLookup, paired, newElements, interfaceList, boundaryList);
+        processFace(e, face, originalElements, faceLookup, paired, newMesh.elements, newMesh.interfaces, newMesh.boundaries);
       }
     }
   }
 
   // Step 4: Assign coordinates
   for (int i = 0; i < nodeOrigin.size(); ++i) {
-    newPos[i] = originalPos[nodeOrigin[i].originalNodeID];
+    newMesh.nodes[i] = originalPos[nodeOrigin[i].originalNodeID];
   }
 }
 
