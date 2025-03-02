@@ -5,6 +5,9 @@
 
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
+#include <filesystem>
+#include <sstream>
 
 // Function to calculate the center of an element
 template<typename T>
@@ -82,7 +85,7 @@ double calculateElementSize(const std::vector<point3D>& points, T& element) {
 
 
 // Function to export solid elemenets to VTK format for visualization
-void exportSolidElementsToVTK(solidMesh mesh, const char* filename, double shrinkFactor = 1.0) {
+void exportSolidElementsToVTK(solidMesh mesh, const std::string filename, double shrinkFactor = 1.0) {
   std::ofstream file(filename);
   file << "# vtk DataFile Version 3.0\n";
   file << "Hexahedral Mesh\n";
@@ -137,7 +140,7 @@ void exportSolidElementsToVTK(solidMesh mesh, const char* filename, double shrin
 }
 
 // Function to export solid elemenets to VTK format for visualization
-void exportInterfaceElementsToVTK(solidMesh mesh, const char* filename, double shrinkFactor = 1.0, double expansionFactor = 0.0) {
+void exportInterfaceElementsToVTK(solidMesh mesh, const std::string filename, double shrinkFactor = 1.0, double expansionFactor = 0.0) {
   std::ofstream file(filename);
   file << "# vtk DataFile Version 3.0\n";
   file << "Hexahedral Mesh\n";
@@ -205,6 +208,48 @@ void exportInterfaceElementsToVTK(solidMesh mesh, const char* filename, double s
     double scalarValue = 1.0; // Example: Assume each Point3D has a `scalarValue` member
     file << scalarValue << "\n";
   }
+}
+
+
+// Function to read mesh data from a text file
+solidMesh readMeshFromFile(const std::string& filename) {
+  std::ifstream file(filename);
+  if (!file.is_open()) {
+    throw std::runtime_error("Failed to open file: " + filename);
+  }
+
+  solidMesh mesh;
+
+  // Read number of nodes
+  int numNodes;
+  file >> numNodes;
+  mesh.nodes.resize(numNodes);
+
+  // Read node coordinates
+  for (int i = 0; i < numNodes; ++i) {
+    file >> mesh.nodes[i].x >> mesh.nodes[i].y >> mesh.nodes[i].z;
+  }
+
+  // Read number of elements
+  int numElements;
+  file >> numElements;
+  mesh.elements.resize(numElements);
+
+  // Read element connectivity
+  for (int i = 0; i < numElements; ++i) {
+    for (int j = 0; j < 8; ++j) {
+      file >> mesh.elements[i].nodes[j];
+      mesh.elements[i].nodes[j]--;
+    }
+  }
+
+  return mesh;
+}
+
+// Function to extract the base name of a file (without extension)
+std::string getBaseName(const std::string& filename) {
+  std::filesystem::path path(filename);
+  return path.stem().string(); 
 }
 
 #endif
