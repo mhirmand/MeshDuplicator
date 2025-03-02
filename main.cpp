@@ -6,8 +6,8 @@
 int main() {
 
   // Create a simple cube mesh with 2 elements
-  std::vector<Element> originalElements(2); // 2 elements
-  std::vector<Point3D> originalPos(12); // 12 total nodes
+  std::vector<solidElement> originalElements(2); // 2 elements
+  std::vector<point3D> originalPos(12); // 12 total nodes
 
   // Define node coordinates for a cube
 	originalPos = 
@@ -27,23 +27,24 @@ int main() {
 	};
 
   // Define element connectivity
-  originalElements[0].nNode = {0, 1, 2, 3, 4, 5, 6, 7};
-  originalElements[1].nNode = {1, 8,	9, 2,	5, 10, 11, 6};
+  originalElements[0].nodes = {0, 1, 2, 3, 4, 5, 6, 7};
+  originalElements[1].nodes = {1, 8,	9, 2,	5, 10, 11, 6};
 
   MeshDuplicator duplicator;
-  Mesh originalMesh;
+  solidMesh originalMesh;
   originalMesh.elements = originalElements;
   originalMesh.nodes = originalPos;
 
-  Mesh newMesh;
-  std::vector<NodeOrigin> nodeOrigin;
+  // prepare nodeOrigin data structure
+  std::vector<nodeOrigin> nodeOrigin;
 
-  duplicator.duplicateNodesHexa(originalMesh, newMesh, nodeOrigin);
+  // evluate new mesh with seperated elements
+  solidMesh newMesh = duplicator.duplicateNodesHexa(originalMesh, nodeOrigin);
 
   // Export results for visualization
-  exportToVTK(originalPos, originalElements, "original_mesh.vtk");
-  exportToVTK(newMesh.nodes, newMesh.elements, "duplicated_mesh.vtk", 0.75);
-  exportToVTK(newMesh.nodes, newMesh.interfaces, "interfaces.vtk", 0.75);
+  exportSolidElementsToVTK(originalMesh, "original_mesh.vtk");
+  exportSolidElementsToVTK(newMesh, "duplicated_mesh.vtk", 0.85);
+  exportInterfaceElementsToVTK(newMesh, "interfaces.vtk", 0.85, 0.02);
   std::cout << "Use ParaView or similar software to visualize the generated VTK files\n";
 
   return 0;
