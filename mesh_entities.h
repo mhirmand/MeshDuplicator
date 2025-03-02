@@ -6,41 +6,49 @@
 #include <vector>
 #include <array>
 
-struct Point3D {
+// parent element struct
+struct element
+{
+  std::array<int, 8> nodes{ -1, -1, -1, -1, -1, -1, -1, -1 };
+};
+
+// point in 3D struct
+struct point3D {
   double x, y, z;
 };
 
-struct NodeOrigin {
-  int originalNodeID;
-  int elementID;
-  int localIndex;
-};
-
-struct Face {
+// face (element edge) struct
+struct elementFace {
   int directionID = 0;
-  std::array<int, 4> nNode{ -1 };
+  int solidElemID = -1;
+  std::array<int, 4> nodes{ -1, -1, -1, -1 };  // each element face in hex mesh has 4 nodes
 };
 
-struct Element {
-  std::array<int, 8> nNode{ -1 };
-  std::array<Face, 6> faces{ -1 };
+// struct for a solid element
+struct solidElement : element {
+  std::array<elementFace, 6> faces{ -1, -1, -1, -1, -1, -1 }; // hex elemenet has 6 faces
 };
 
-struct InterfaceElem {
+// struct for an interface element
+struct interfaceElement : element {
+  std::array<elementFace, 2> faces{ -1 };  // interface element has two faces
   int solidID1 = -1, solidID2 = -1;
   int faceID1 = -1, faceID2 = -1;
-  std::array<int, 8> nNode{ -1 };
 };
 
-struct BoundaryFace {
-  std::array<int, 4> nNode{ -1 };
+// struct for a solid mesh
+struct solidMesh {
+  std::vector<point3D> nodes;
+  std::vector<solidElement> elements;
+  std::vector<interfaceElement> interfaces;
+  std::vector<elementFace> boundaries;
 };
 
-struct Mesh {
-  std::vector<Point3D> nodes;
-  std::vector<Element> elements;
-  std::vector<InterfaceElem> interfaces;
-  std::vector<BoundaryFace> boundaries;
+// node origin struct
+struct nodeOrigin {
+  int originalNode;    // original node of a duplicated node
+  int Originalelement; // original element the original node belonged to
+  int localNodeIndex;  // local index of the original node in the original element
 };
 
 #endif MESH_ENTITIES_H

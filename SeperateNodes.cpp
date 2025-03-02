@@ -2,37 +2,44 @@
 #include "mesh_entities.h"
 
 #include <algorithm>
+#include <cassert>
 
-void MeshDuplicator::duplicateNodesHexa(
-  const Mesh &originalMesh,
-  Mesh & newMesh,
-
-  std::vector<NodeOrigin>& nodeOrigin
+solidMesh MeshDuplicator::duplicateNodesHexa(
+  const solidMesh &originalMesh,
+  // solidMesh & newMesh,
+  std::vector<nodeOrigin>& nodeOrigin
 ) {
 
   // get original element entities
-  std::vector<Element> originalElements = originalMesh.elements;
-  std::vector<Point3D> originalPos = originalMesh.nodes;
+  std::vector<solidElement> originalElements = originalMesh.elements;
+  std::vector<point3D> originalPos = originalMesh.nodes;
+  std::vector<interfaceElement> originalInterfaces = originalMesh.interfaces;
 
-  // Reset output containers
+  // verify input
+  assert(originalInterfaces.size() == 0);
+
+  // Create output mesh
+  solidMesh newMesh;
   newMesh.elements.clear();
   newMesh.nodes.clear();
   newMesh.interfaces.clear();
   newMesh.boundaries.clear();
-  nodeOrigin.clear();
 
   // Pre-allocate memory
   newMesh.elements.reserve(originalElements.size());
   newMesh.nodes.resize(8 * originalElements.size());
+
+  // prepare nodeOrigin output 
+  nodeOrigin.clear();
   nodeOrigin.reserve(8 * originalElements.size());
 
   // Step 1: Duplicate nodes
   int newnnode = 0;
   for (const auto& elem : originalElements) {
-    Element newElem;
+    solidElement newElem;
     for (int i = 0; i < 8; ++i) {
-      nodeOrigin.push_back({ elem.nNode[i], static_cast<int>(newMesh.elements.size()), i });
-      newElem.nNode[i] = newnnode++;
+      nodeOrigin.push_back({ elem.nodes[i], static_cast<int>(newMesh.elements.size()), i });
+      newElem.nodes[i] = newnnode++;
     }
     newMesh.elements.push_back(newElem);
   }
@@ -53,18 +60,20 @@ void MeshDuplicator::duplicateNodesHexa(
 
   // Step 4: Assign coordinates
   for (int i = 0; i < nodeOrigin.size(); ++i) {
-    newMesh.nodes[i] = originalPos[nodeOrigin[i].originalNodeID];
+    newMesh.nodes[i] = originalPos[nodeOrigin[i].originalNode];
   }
+
+  return newMesh;
 }
 
 void MeshDuplicator::buildFaceLookup(
-  const std::vector<Element>& elements,
+  const std::vector<solidElement>& elements,
   std::unordered_map<std::array<int, 4>, std::pair<int, int>>& lookup) {
   for (int e = 0; e < elements.size(); ++e) {
     for (int face = 0; face < 6; ++face) {
       std::array<int, 4> key;
       for (int i = 0; i < 4; ++i) {
-        key[i] = elements[e].nNode[faceNodes[face][i]];
+        key[i] = elements[e].nodes[faceNodes[face][i]];
       }
       if (lookup.find(key) != lookup.end()) {
         throw std::runtime_error("Duplicate face key in face lookup");
@@ -77,17 +86,17 @@ void MeshDuplicator::buildFaceLookup(
 void MeshDuplicator::processFace(
   int e,
   int face,
-  const std::vector<Element>& originalElements,
+  const std::vector<solidElement>& originalElements,
   const std::unordered_map<std::array<int, 4>, std::pair<int, int>>& faceLookup,
   std::vector<std::vector<bool>>& paired,
-  std::vector<Element>& newElements,
-  std::vector<InterfaceElem>& interfaceList,
-  std::vector<BoundaryFace>& boundaryList
+  std::vector<solidElement>& newElements,
+  std::vector<interfaceElement>& interfaceList,
+  std::vector<elementFace>& boundaryList
 ) {
   const auto& elem = originalElements[e];
   std::array<int, 4> originalKey;
   for (int i = 0; i < 4; ++i) {
-    originalKey[i] = elem.nNode[faceNodes[face][i]];
+    originalKey[i] = elem.nodes[faceNodes[face][i]];
   }
 
   // Check permutations
@@ -109,12 +118,14 @@ void MeshDuplicator::processFace(
 
   if (foundPair.first == -1) {
     // Boundary face
-    BoundaryFace bf;
+    elementFace bf;
+    bf.solidElemID = e;
     for (int i = 0; i < 4; ++i) {
-      bf.nNode[i] = newElements[e].nNode[faceNodes[face][i]];
+      bf.nodes[i] = newElements[e].nodes[faceNodes[face][i]];
     }
     boundaryList.push_back(bf);
     newElements[e].faces[face].directionID = 0;
+
   }
   else {
     handleInternalFace(e, face, foundPair, originalElements, paired, newElements, interfaceList);
@@ -125,10 +136,10 @@ void MeshDuplicator::handleInternalFace(
   int e,
   int face,
   const std::pair<int, int>& foundPair,
-  const std::vector<Element>& originalElements,
+  const std::vector<solidElement>& originalElements,
   std::vector<std::vector<bool>>& paired,
-  std::vector<Element>& newElements,
-  std::vector<InterfaceElem>& interfaceList
+  std::vector<solidElement>& newElements,
+  std::vector<interfaceElement>& interfaceList
 ) {
   int e2 = foundPair.first;
   int face2 = foundPair.second;
@@ -137,7 +148,7 @@ void MeshDuplicator::handleInternalFace(
   paired[e][face] = true;
   paired[e2][face2] = true;
 
-  InterfaceElem ie;
+  interfaceElement ie;
   ie.solidID1 = e;
   ie.solidID2 = e2;
   ie.faceID1 = face;
@@ -147,11 +158,11 @@ void MeshDuplicator::handleInternalFace(
   const auto& otherFaceNodes = faceNodes[face2];
   std::array<int, 4> otherOriginalNodes;
   for (int i = 0; i < 4; ++i) {
-    otherOriginalNodes[i] = originalElements[e2].nNode[otherFaceNodes[i]];
+    otherOriginalNodes[i] = originalElements[e2].nodes[otherFaceNodes[i]];
   }
 
   std::array<int, 4> permutation;
-  const auto& originalKey = originalElements[e].nNode;
+  const auto& originalKey = originalElements[e].nodes;
   if (originalKey[faceNodes[face][0]] == otherOriginalNodes[3] &&
     originalKey[faceNodes[face][1]] == otherOriginalNodes[2]) {
     permutation = { 3, 2, 1, 0 };
@@ -161,11 +172,27 @@ void MeshDuplicator::handleInternalFace(
   }
 
   for (int i = 0; i < 4; ++i) {
-    ie.nNode[i] = newElements[e].nNode[faceNodes[face][i]];
-    ie.nNode[i + 4] = newElements[e2].nNode[otherFaceNodes[permutation[i]]];
+    // add nodes data
+    ie.nodes[i] = newElements[e].nodes[faceNodes[face][i]];
+    ie.nodes[i + 4] = newElements[e2].nodes[otherFaceNodes[permutation[i]]];
+
+    // add face data
+    ie.faces[0].nodes[i] = ie.nodes[i];
+    ie.faces[1].nodes[i] = ie.nodes[i + 4];
   }
 
+  // add remaining face data
+  ie.faces[0].solidElemID = e;
+  ie.faces[0].directionID = -1;
+
+  ie.faces[1].solidElemID = e2;
+  ie.faces[1].directionID = 1;
+
+  // add interface element
   interfaceList.push_back(ie);
+ 
+  // update solid element data
   newElements[e].faces[face].directionID = -1;
   newElements[e2].faces[face2].directionID = 1;
+
 }

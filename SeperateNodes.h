@@ -23,16 +23,10 @@ namespace std {
 
 class MeshDuplicator {
 public:
-  void duplicateNodesHexa(
-    const Mesh& originalMesh,
-    Mesh& newMesh,
-    // const std::vector<Element>& originalElements,
-    // const std::vector<Point3D>& originalPos,
-    // std::vector<Element>& newElements,
-    // std::vector<Point3D>& newPos,
-    // std::vector<InterfaceElem>& interfaceList,
-    // std::vector<BoundaryFace>& boundaryList,
-    std::vector<NodeOrigin>& nodeOrigin
+  solidMesh duplicateNodesHexa(
+    const solidMesh& originalMesh,
+    // solidMesh& newMesh,
+    std::vector<nodeOrigin>& nodeOrigin
   );
 
 private:
@@ -42,29 +36,29 @@ private:
   } };
 
   void buildFaceLookup(
-    const std::vector<Element>& elements,
+    const std::vector<solidElement>& elements,
     std::unordered_map<std::array<int, 4>, std::pair<int, int>>& lookup
   );
 
   void processFace(
     int e,
     int face,
-    const std::vector<Element>& originalElements,
+    const std::vector<solidElement>& originalElements,
     const std::unordered_map<std::array<int, 4>, std::pair<int, int>>& faceLookup,
     std::vector<std::vector<bool>>& paired,
-    std::vector<Element>& newElements,
-    std::vector<InterfaceElem>& interfaceList,
-    std::vector<BoundaryFace>& boundaryList
+    std::vector<solidElement>& newElements,
+    std::vector<interfaceElement>& interfaceList,
+    std::vector<elementFace>& boundaryList
   );
 
   void handleInternalFace(
     int e,
     int face,
     const std::pair<int, int>& foundPair,
-    const std::vector<Element>& originalElements,
+    const std::vector<solidElement>& originalElements,
     std::vector<std::vector<bool>>& paired,
-    std::vector<Element>& newElements,
-    std::vector<InterfaceElem>& interfaceList
+    std::vector<solidElement>& newElements,
+    std::vector<interfaceElement>& interfaceList
   );
 };
 
