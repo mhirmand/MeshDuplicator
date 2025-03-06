@@ -55,6 +55,7 @@ private:
     int e,
     int face,
     const std::pair<int, int>& foundPair,
+    const std::array<int, 4> &foundPerm,
     const std::vector<solidElement>& originalElements,
     std::vector<std::vector<bool>>& paired,
     std::vector<solidElement>& newElements,

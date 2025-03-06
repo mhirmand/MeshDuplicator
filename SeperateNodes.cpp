@@ -100,18 +100,22 @@ void MeshDuplicator::processFace(
   }
 
   // Check permutations
-  const std::array<std::array<int, 4>, 4> otherKeys = { {
-      {originalKey[3], originalKey[2], originalKey[1], originalKey[0]},
-      {originalKey[2], originalKey[1], originalKey[0], originalKey[3]},
-      {originalKey[1], originalKey[0], originalKey[3], originalKey[2]},
-      {originalKey[0], originalKey[3], originalKey[2], originalKey[1]}
+  const std::array<std::array<int, 4>, 4> permutations = { {
+      {3, 2, 1, 0},
+      {2, 1, 0, 3},
+      {1, 0, 3, 2},
+      {0, 3, 2, 1}
   } };
 
   std::pair<int, int> foundPair(-1, -1);
-  for (const auto& key : otherKeys) {
-    auto it = faceLookup.find(key);
+  std::array<int, 4> foundPerm{ -1, -1, -1, -1 };
+  for (const auto& perm : permutations) {
+    std::array<int, 4> otherKey = { 
+      originalKey[perm[0]], originalKey[perm[1]], originalKey[perm[2]], originalKey[perm[3]]};
+    auto it = faceLookup.find(otherKey);
     if (it != faceLookup.end() && (it->second.first != e || it->second.second != face)) {
       foundPair = it->second;
+      foundPerm = perm;
       break;
     }
   }
@@ -128,7 +132,7 @@ void MeshDuplicator::processFace(
 
   }
   else {
-    handleInternalFace(e, face, foundPair, originalElements, paired, newElements, interfaceList);
+    handleInternalFace(e, face, foundPair, foundPerm, originalElements, paired, newElements, interfaceList);
   }
 }
 
@@ -136,6 +140,7 @@ void MeshDuplicator::handleInternalFace(
   int e,
   int face,
   const std::pair<int, int>& foundPair,
+  const std::array<int, 4>& foundPerm,
   const std::vector<solidElement>& originalElements,
   std::vector<std::vector<bool>>& paired,
   std::vector<solidElement>& newElements,
@@ -156,25 +161,27 @@ void MeshDuplicator::handleInternalFace(
 
   // Determine permutation
   const auto& otherFaceNodes = faceNodes[face2];
-  std::array<int, 4> otherOriginalNodes;
+  const auto& thisFaecNodes = faceNodes[face];
+  std::array<int, 4> otherOriginalNodes, thisOriginalNodes;
   for (int i = 0; i < 4; ++i) {
-    otherOriginalNodes[i] = originalElements[e2].nodes[otherFaceNodes[i]];
+    thisOriginalNodes[i] = originalElements[e].nodes[thisFaecNodes[i]];
+    otherOriginalNodes[i] = originalElements[e2].nodes[otherFaceNodes[foundPerm[i]]];
   }
 
-  std::array<int, 4> permutation;
-  const auto& originalKey = originalElements[e].nodes;
-  if (originalKey[faceNodes[face][0]] == otherOriginalNodes[3] &&
-    originalKey[faceNodes[face][1]] == otherOriginalNodes[2]) {
-    permutation = { 3, 2, 1, 0 };
-  }
-  else {
-    permutation = { 0, 3, 2, 1 }; // Default case
-  }
+  //std::array<int, 4> permutation;
+  //const auto& originalKey = originalElements[e].nodes;
+  //if (originalKey[faceNodes[face][0]] == otherOriginalNodes[3] &&
+  //  originalKey[faceNodes[face][1]] == otherOriginalNodes[2]) {
+  //  permutation = { 3, 2, 1, 0 };
+  //}
+  //else {
+  //  permutation = { 0, 3, 2, 1 }; // Default case
+  //}
 
   for (int i = 0; i < 4; ++i) {
     // add nodes data
-    ie.nodes[i] = newElements[e].nodes[faceNodes[face][i]];
-    ie.nodes[i + 4] = newElements[e2].nodes[otherFaceNodes[permutation[i]]];
+    ie.nodes[i] = newElements[e].nodes[thisFaecNodes[i]];
+    ie.nodes[i + 4] = newElements[e2].nodes[otherFaceNodes[foundPerm[i]]];
 
     // add face data
     ie.faces[0].nodes[i] = ie.nodes[i];
