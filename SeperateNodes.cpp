@@ -162,21 +162,6 @@ void MeshDuplicator::handleInternalFace(
   // Determine permutation
   const auto& otherFaceNodes = faceNodes[face2];
   const auto& thisFaecNodes = faceNodes[face];
-  std::array<int, 4> otherOriginalNodes, thisOriginalNodes;
-  for (int i = 0; i < 4; ++i) {
-    thisOriginalNodes[i] = originalElements[e].nodes[thisFaecNodes[i]];
-    otherOriginalNodes[i] = originalElements[e2].nodes[otherFaceNodes[foundPerm[i]]];
-  }
-
-  //std::array<int, 4> permutation;
-  //const auto& originalKey = originalElements[e].nodes;
-  //if (originalKey[faceNodes[face][0]] == otherOriginalNodes[3] &&
-  //  originalKey[faceNodes[face][1]] == otherOriginalNodes[2]) {
-  //  permutation = { 3, 2, 1, 0 };
-  //}
-  //else {
-  //  permutation = { 0, 3, 2, 1 }; // Default case
-  //}
 
   for (int i = 0; i < 4; ++i) {
     // add nodes data

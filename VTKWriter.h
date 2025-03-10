@@ -18,9 +18,9 @@ point3D calculateElementCenter(const std::vector<point3D>& points, T& element) {
     center.y += points[node].y;
     center.z += points[node].z;
   }
-  center.x /= 8.0;
-  center.y /= 8.0;
-  center.z /= 8.0;
+  center.x /= element.nodes.size();
+  center.y /= element.nodes.size();
+  center.z /= element.nodes.size();
   return center;
 }
 
@@ -83,9 +83,9 @@ double calculateElementSize(const std::vector<point3D>& points, T& element) {
   return totalLength / 12.0;
 }
 
-
-// Function to export solid elemenets to VTK format for visualization
-void exportSolidElementsToVTK(solidMesh mesh, const std::string filename, double shrinkFactor = 1.0) {
+// Function to export elemenets to VTK format for visualization
+template<typename T>
+void exportElementsToVTK(const std::vector<point3D>& points, const std::vector<T>& elements, const std::string filename, double shrinkFactor = 1.0, const double dVal = 0.0 ) {
   std::ofstream file(filename);
   file << "# vtk DataFile Version 3.0\n";
   file << "Hexahedral Mesh\n";
@@ -93,13 +93,13 @@ void exportSolidElementsToVTK(solidMesh mesh, const std::string filename, double
   file << "DATASET UNSTRUCTURED_GRID\n";
 
   // make a copy of the nodes
-  std::vector<point3D> newPoints = mesh.nodes;
+  auto newPoints = points;
 
   // adjust the position of the nodes for shrinkage
-  if (shrinkFactor != 1.0 && mesh.interfaces.size() > 0)
+  if (shrinkFactor != 1.0)
   {
-    for (const auto& e : mesh.elements) {
-      point3D center = calculateElementCenter(mesh.nodes, e);
+    for (const auto& e : elements) {
+      point3D center = calculateElementCenter(points, e);
       for (int node : e.nodes) {
         newPoints[node].x = center.x + (newPoints[node].x - center.x) * shrinkFactor;
         newPoints[node].y = center.y + (newPoints[node].y - center.y) * shrinkFactor;
@@ -115,17 +115,17 @@ void exportSolidElementsToVTK(solidMesh mesh, const std::string filename, double
   }
 
   // Write cells
-  int totalSize = static_cast<int>(mesh.elements.size() * (1 + 8)); // 8 nodes per hex + cell type
-  file << "CELLS " << mesh.elements.size() << " " << totalSize << "\n";
-  for (const auto& e : mesh.elements) {
+  int totalSize = static_cast<int>(elements.size() * (1 + 8)); // 8 nodes per hex + cell type
+  file << "CELLS " << elements.size() << " " << totalSize << "\n";
+  for (const auto& e : elements) {
     file << "8 ";
     for (int node : e.nodes) file << node << " ";
     file << "\n";
   }
 
   // Write cell types
-  file << "CELL_TYPES " << mesh.elements.size() << "\n";
-  for (size_t i = 0; i < mesh.elements.size(); ++i) {
+  file << "CELL_TYPES " << elements.size() << "\n";
+  for (size_t i = 0; i < elements.size(); ++i) {
     file << "12\n"; // VTK_HEXAHEDRON
   }
 
@@ -134,82 +134,10 @@ void exportSolidElementsToVTK(solidMesh mesh, const std::string filename, double
   file << "SCALARS ele_type int 1\n";
   file << "LOOKUP_TABLE default\n";
   for (const auto& p : newPoints) {
-    double scalarValue = 0.0; // Example: Assume each Point3D has a `scalarValue` member
+		double scalarValue = dVal; // Assume each Point3D has a member representing its type
     file << scalarValue << "\n";
   }
 }
-
-// Function to export solid elemenets to VTK format for visualization
-void exportInterfaceElementsToVTK(solidMesh mesh, const std::string filename, double shrinkFactor = 1.0, double expansionFactor = 0.0) {
-  std::ofstream file(filename);
-  file << "# vtk DataFile Version 3.0\n";
-  file << "Hexahedral Mesh\n";
-  file << "ASCII\n";
-  file << "DATASET UNSTRUCTURED_GRID\n";
-
-  // make a copy of the nodes
-  std::vector<point3D> newPoints = mesh.nodes;
-
-  // adjust the position of the nodes for interface expansion
-  if (mesh.interfaces.size() > 0) {
-    for (const auto& e : mesh.interfaces) {
-      auto center = calculateElementCenter(newPoints, e);
-
-			// apply shirnkage.
-			if (shrinkFactor != 1.0) {
-				for (int node : e.nodes) {
-					newPoints[node].x = center.x + (newPoints[node].x - center.x) * shrinkFactor;
-					newPoints[node].y = center.y + (newPoints[node].y - center.y) * shrinkFactor;
-					newPoints[node].z = center.z + (newPoints[node].z - center.z) * shrinkFactor;
-				}
-			}
-
-      // apply expansion.
-      if (expansionFactor > 0.0) {
-        for (const auto& f : e.faces) {
-          auto normal = calculateFaceNormal(newPoints, f);
-          double lSolidEle = calculateElementSize(newPoints, mesh.elements[f.solidElemID]);
-          for (int node : f.nodes) {
-            newPoints[node].x += normal.x * (double)(f.directionID) * 0.5 * lSolidEle * expansionFactor;
-            newPoints[node].y += normal.y * (double)(f.directionID) * 0.5 * lSolidEle * expansionFactor;
-            newPoints[node].z += normal.z * (double)(f.directionID) * 0.5 * lSolidEle * expansionFactor;
-          }
-        }
-      }
-    }
-  }
-
-  // Write points
-  file << "POINTS " << newPoints.size() << " double\n";
-  for (const auto& p : newPoints) {
-    file << p.x << " " << p.y << " " << p.z << "\n";
-  }
-
-  // Write cells
-  int totalSize = static_cast<int>(mesh.interfaces.size() * (1 + 8)); // 8 nodes per interface + cell type
-  file << "CELLS " << mesh.interfaces.size() << " " << totalSize << "\n";
-  for (const auto& e : mesh.interfaces) {
-    file << "8 ";
-    for (int node : e.nodes) file << node << " ";
-    file << "\n";
-  }
-
-  // Write cell types
-  file << "CELL_TYPES " << mesh.interfaces.size() << "\n";
-  for (size_t i = 0; i < mesh.interfaces.size(); ++i) {
-    file << "12\n"; // VTK_HEXAHEDRON
-  }
-
-  // Write scalar data (e.g., a double value for each node)
-  file << "POINT_DATA " << newPoints.size() << "\n"; 
-  file << "SCALARS ele_type int 1\n";         
-  file << "LOOKUP_TABLE default\n";
-  for (const auto& p : newPoints) {
-    double scalarValue = 1.0; // Example: Assume each Point3D has a `scalarValue` member
-    file << scalarValue << "\n";
-  }
-}
-
 
 // Function to read mesh data from a text file
 solidMesh readMeshFromFile(const std::string& filename) {

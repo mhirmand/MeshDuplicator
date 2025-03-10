@@ -42,9 +42,14 @@ int testCaseCube()
   solidMesh newMesh = duplicator.duplicateNodesHexa(originalMesh, nodeOrigin);
 
   // Export results for visualization
-  exportSolidElementsToVTK(originalMesh, "cube_original_mesh.vtk");
-  exportSolidElementsToVTK(newMesh, "cube_duplicated_mesh.vtk", 0.75);
-  // exportInterfaceElementsToVTK(newMesh, "cube_interfaces.vtk", 0.75, 0.01);
+  exportElementsToVTK(originalMesh.nodes, originalMesh.elements, "test_cube_original_mesh.vtk", 1.0, 2.0);
+  exportElementsToVTK(newMesh.nodes, newMesh.elements, "test_cube_duplicated_mesh.vtk", 0.75, 0.0);
+  exportElementsToVTK(newMesh.nodes, newMesh.interfaces, "test_cube_interfaces.vtk", 1.0, 1.0);
+
+  std::cout << "Unit Cube Test Case: Generated VTK files:\n";
+  std::cout << "  - " << "test_cube_original_mesh.vtk" << "\n";
+  std::cout << "  - " << "test_cube_duplicated_mesh.vtk" << "\n";
+  std::cout << "  - " << "test_cube_interfaces.vtk" << "\n";
 
   return 0;
 }
@@ -75,17 +80,17 @@ int testCaseGeneral(const std::string& filename)
   // Construct output file names based on the input file name
   std::string originalMeshFile = baseName + "_original_mesh.vtk";
   std::string duplicatedMeshFile = baseName + "_duplicated_mesh.vtk";
-  // std::string interfacesFile = baseName + "_interfaces.vtk";
+  std::string interfacesFile = baseName + "_interfaces.vtk";
 
   // Export results for visualization
-  exportSolidElementsToVTK(originalMesh, originalMeshFile);
-  exportSolidElementsToVTK(newMesh, duplicatedMeshFile, 0.75);
-  // exportInterfaceElementsToVTK(newMesh, interfacesFile, 0.75, 0.0);
+  exportElementsToVTK(originalMesh.nodes, originalMesh.elements, originalMeshFile, 1.0, 2.0);
+  exportElementsToVTK(newMesh.nodes, newMesh.elements, duplicatedMeshFile, 0.75, 0.0);
+  exportElementsToVTK(newMesh.nodes, newMesh.interfaces, interfacesFile, 1.0, 1.0);
 
-  std::cout << "Generated VTK files:\n";
+  std::cout << "Test Case" << baseName << ": Generated VTK files: \n";
   std::cout << "  - " << originalMeshFile << "\n";
   std::cout << "  - " << duplicatedMeshFile << "\n";
-  // std::cout << "  - " << interfacesFile << "\n";
+  std::cout << "  - " << interfacesFile << "\n";
 
   return 0;
 }
@@ -95,7 +100,8 @@ int main() {
 
 
   int test1 = testCaseCube();
-  int test2 = testCaseGeneral("test.txt");
+  int test2 = testCaseGeneral("test_1.txt");
+  int test3 = testCaseGeneral("test_2.txt");
 
   std::cout << "Use ParaView or similar software to visualize the generated VTK files\n";
 
